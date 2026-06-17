@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Viaggio: Porto e Lisbona</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            background-color: #f4f7f6; 
+            overflow: hidden;
+        }
+        header { 
+            background-color: #005f73; 
+            color: white; 
+            padding: 1rem; 
+            text-align: center; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .container { 
+            display: flex; 
+            flex: 1; 
+            overflow: hidden; 
+            position: relative;
+        }
+        .map-container { 
+            flex: 1; 
+            height: 100%;
+        }
+        iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+        }
+        .panel { 
+            width: 480px; 
+            background: white; 
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1); 
+            z-index: 20;
+        }
+        
+        /* Stile delle Schede (Tab) */
+        .tabs {
+            display: flex;
+            background: #e9ecef;
+            border-bottom: 2px solid #0a9396;
+            overflow-x: auto;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: none;
+            font-weight: bold;
+            color: #495057;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .tab-button:hover { background: #dee2e6; }
+        .tab-button.active { background: #0a9396; color: white; }
+        
+        /* Menu a tenda per Mobile */
+        .mobile-menu-container {
+            display: none;
+        }
+        .mobile-select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 2px solid #e9d8a6;
+            background-color: #0a9396;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        /* Pulsante Chiudi Pannello Mobile */
+        .btn-close-panel {
+            display: none;
+            background: #2b2d42;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        /* Contenuto delle Schede */
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: none;
+        }
+        .tab-content.active { display: block; }
+
+        h2 { 
+            color: #0a9396; 
+            font-size: 1.3rem;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+            margin-top: 15px;
+        }
+        
+        /* Barra di ricerca e Reset */
+        .search-bar {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 2px solid #0a9396;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        .btn-reset-map {
+            background: #005f73;
+            color: white;
+            border: none;
+            padding: 8px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .btn-reset-map:hover { background: #0a9396; }
+
+        .item-list { list-style: none; padding: 0; margin: 0; }
+        .item-list li {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #e9ecef;
+            position: relative;
+        }
+        .item-title { font-weight: bold; color: #2b2d42; display: block; margin-bottom: 3px; font-size: 1.05rem; }
+        .item-desc { font-size: 0.9rem; color: #6c757d; line-height: 1.4; display: block; margin-bottom: 5px; }
+        .item-link { display: inline-block; font-size: 0.85rem; color: #0a9396; text-decoration: none; font-weight: bold; margin-right: 10px;}
+        .item-link:hover { text-decoration: underline; }
+        
+        /* Pulsanti Azione */
+        .btn-action {
+            background: #e9d8a6;
+            color: #005f73;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .btn-action:hover { background: #ee9b00; color: white; }
+        .btn-map {
+            background: #94d2bd;
+            color: #005f73;
+        }
+        
+        .btn-delete {
+            background: #d62828;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            float: right;
+            margin-top: -20px;
+        }
+        .btn-delete:hover { background: #9b2226; }
+
+        .info-card {
+            background: #f8f9fa;
+            border-left: 4px solid #ee9b00;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .info-card strong { color: #2b2d42; }
+
+        /* Form per aggiungere elementi */
+        .add-form {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+        }
+        .add-form input, .add-form select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .add-form button {
+            background: #0a9396;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+        .add-form button:hover { background: #005f73; }
+
+        /* Ottimizzazione Responsiva per Telefono */
+        @media (max-width: 768px) {
+            header {
+                padding: 0.6rem 1rem;
+            }
+            .mobile-menu-container {
+                display: block;
+            }
+            .tabs {
+                display: none !important; /* Nasconde le linguette classiche su mobile */
+            }
+            .btn-close-panel {
+                display: block; /* Mostra tasto di chiusura finestre su mobile */
+            }
+            .container { 
+                flex-direction: row; /* Impedisce alle finestre di andare sotto */
+            }
+            .panel { 
+                position: absolute;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                width: 85%; /* Occupa l'85% dello schermo da destra */
+                height: 100%;
+                transform: translateX(100%); /* Nascosto di default a destra */
+                transition: transform 0.3s ease-in-out;
+                box-shadow: -5px 0 15px rgba(0,0,0,0.25);
+            }
+            .panel.open {
+                transform: translateX(0); /* Slitta verso sinistra per aprirsi alla destra della mappa */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 style="margin: 0; font-size: 1.1rem; text-align: left;">Pannello di Viaggio</h1>
+        
+        <!-- Menù a tenda visibile solo su Smartphone -->
+        <div class="mobile-menu-container">
+            <select id="mobile-tab-select" class="mobile-select" onchange="handleMobileMenu(this.value)">
+                <option value="" disabled selected>📂 Apri Finestra...</option>
+                <option value="MAPPA_PRINCIPALE">🗺️ Vedi Mappa Intera</option>
+                <option value="luoghi">📍 Luoghi</option>
+                <option value="itinerario">📅 Itinerario</option>
+                <option value="prenotazioni">🎫 Prenotazioni</option>
+                <option value="trasferimenti">🚗 Trasferimenti</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="map-container">
+            <iframe id="map-iframe" src="https://www.google.com/maps/d/embed?mid=1ISBPkytPIIaTY9zPDX3JfsgXRJeQCSc"></iframe>
+        </div>
+
+        <div class="panel" id="side-panel">
+            <button class="btn-close-panel" onclick="closePanel()">✕ Chiudi Finestra</button>
+            
+            <div class="tabs">
+                <button class="tab-button active" onclick="openTab(event, 'luoghi')">Luoghi</button>
+                <button class="tab-button" onclick="openTab(event, 'itinerario')">Itinerario</button>
+                <button class="tab-button" onclick="openTab(event, 'prenotazioni')">Prenotazioni</button>
+                <button class="tab-button" onclick="openTab(event, 'trasferimenti')">Trasferimenti</button>
+            </div>
+
+            <!-- SCHEDA LUOGHI -->
+            <div id="luoghi" class="tab-content active">
+                <input type="text" id="search-input" class="search-bar" placeholder="Cerca un luogo o una parola chiave..." onkeyup="searchPlaces()">
+                <button class="btn-reset-map" onclick="resetMap()">🗺️ Ripristina Mappa Principale</button>
+                
+                <h2>Porto</h2>
+                <ul class="item-list" id="lista-porto">
+                    <!-- CASA PORTO AGGIUNTA -->
+                    <li style="background: #fdf0d5; padding: 10px; border-radius: 6px;">
+                        <span class="item-title">🏠 Casa a Porto (Alloggio)</span>
+                        <span class="item-desc">Tv do Monte Tadeu 37, Porto</span>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Tv do Monte Tadeu 37', 'Porto')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Casa a Porto')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Cattedrale di Porto (Sé)</span>
+                        <span class="item-desc">Chiesa-fortezza romanica che domina la città dall'alto con un magnifico chiostro gotico decorato in azulejos.</span>
+                        <a href="http://www.diocese-porto.pt/" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Cattedrale di Porto Sé', 'Porto')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Cattedrale di Porto (Sé)')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Cais da Ribeira</span>
+                        <span class="item-desc">Passeggiata lungo il fiume Douro, cuore pulsante e da cartolina di Porto, piena di locali e case colorate.</span>
+                        <a href="https://www.visitporto.travel/" target="_blank" class="item-link">Info Turistiche</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Cais da Ribeira', 'Porto')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Cais da Ribeira')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Parque das Virtudes</span>
+                        <span class="item-desc">Giardino terrazzato panoramico ideale per riposarsi e ammirare il panorama circostante.</span>
+                        <a href="https://www.visitporto.travel/" target="_blank" class="item-link">Info Parco</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Parque das Virtudes', 'Porto')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Parque das Virtudes')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Cappella di Santa Caterina (Capela das Almas)</span>
+                        <span class="item-desc">Piccola chiesa famosa in tutto il mondo per la facciata interamente rivestita di piastrelle di azulejos bianche e azzurre.</span>
+                        <a href="https://www.visitporto.travel/" target="_blank" class="item-link">Info Cappella</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Capela das Almas', 'Porto')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Cappella di Santa Caterina')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Torre dos Clérigos</span>
+                        <span class="item-desc">Iconico campanile barocco che offre una vista panoramica completa sulla città dopo una scalata di 225 gradini.</span>
+                        <a href="https://www.torredosclerigos.pt/" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Torre dos Clérigos', 'Porto')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Torre dos Clérigos')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Libreria Lello</span>
+                        <span class="item-desc">Storica libreria nota per la sua architettura neogotica. Ingresso a pagamento su prenotazione.</span>
+                        <a href="https://www.livrarialello.pt/" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Livraria Lello', 'Porto')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Libreria Lello')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Palacio da Bolsa</span>
+                        <span class="item-desc">Palazzo ottocentesco in stile neoclassico con sale monumentali, tra cui spicca lo sfarzoso Salone Arabo.</span>
+                        <a href="https://palacio-da-bolsa.com/" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Palacio da Bolsa', 'Porto')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Palacio da Bolsa')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Cantine Cálem</span>
+                        <span class="item-desc">Cantina storica situata a Gaia, celebre per la produzione di vino Porto, i tour guidati e gli spettacoli di fado.</span>
+                        <a href="https://www.calem.pt/" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Caves Cálem', 'Vila Nova de Gaia')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Cantine Cálem')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Jardim do Morro</span>
+                        <span class="item-desc">Parco situato sulla sponda di Gaia, subito dopo il ponte Luis I, rinomato come punto di ritrovo per osservare il tramonto.</span>
+                        <a href="https://www.visitportugal.com/" target="_blank" class="item-link">Info Portogallo</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Jardim do Morro', 'Vila Nova de Gaia')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Jardim do Morro')">+ Itinerario</button>
+                    </li>
+                </ul>
+
+                <h2>Lisbona</h2>
+                <ul class="item-list" id="lista-lisbona">
+                    <!-- CASA LISBONA AGGIUNTA -->
+                    <li style="background: #fdf0d5; padding: 10px; border-radius: 6px;">
+                        <span class="item-title">🏠 BnB a Lisbona (Alloggio)</span>
+                        <span class="item-desc">Rua de Buenos Aires 27, 1200-798 Lisboa</span>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Rua de Buenos Aires 27', 'Lisbona')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('BnB a Lisbona')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Giardino Botanico di Lisbona</span>
+                        <span class="item-desc">Oasi verde scientifica nel quartiere Principe Real. Ingresso gratuito la domenica mattina fino alle 13:00.</span>
+                        <a href="https://www.museus.ulisboa.pt/pt-pt/jardim-botanico-lisboa" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Jardim Botânico de Lisboa', 'Lisbona')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Giardino Botanico')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Quartiere Alfama</span>
+                        <span class="item-desc">Il rione più antico e caratteristico della città, fatto di vicoli tortuosi e storiche case del fado.</span>
+                        <a href="https://www.visitlisbona.com/" target="_blank" class="item-link">Info Turistiche</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Alfama', 'Lisbona')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Quartiere Alfama')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Sé de Lisboa (Cattedrale)</span>
+                        <span class="item-desc">Cattedrale principale di Lisbona, imponente struttura in stile romanico con facciata a due torri.</span>
+                        <a href="https://www.sedelisboa.pt/" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Sé de Lisboa', 'Lisbona')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Sé de Lisboa')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Zona Belém</span>
+                        <span class="item-desc">Area monumentale legata alle scoperte marittime, dove si trovano la Torre di Belém e i famosi laboratori di pasticceria.</span>
+                        <a href="https://www.visitlisbona.com/" target="_blank" class="item-link">Info Belém</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Torre de Belém', 'Lisbona')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Zona Belém')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Palácio Nacional da Pena</span>
+                        <span class="item-desc">Castello colorato e stravagante situato in cima alle colline boscose di Sintra.</span>
+                        <a href="https://www.parquesdesintra.pt/" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Palácio Nacional da Pena', 'Sintra')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Palácio Nacional da Pena')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Castello di São Jorge</span>
+                        <span class="item-desc">Fortezza medievale situata sulla collina più alta del centro storico, dotata di ampie corti interne e camminamenti panoramici.</span>
+                        <a href="https://castelodesaojorge.pt/" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Castelo de São Jorge', 'Lisbona')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Castello di São Jorge')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Monastero dos Jerónimos</span>
+                        <span class="item-desc">Complesso monumentale capolavoro dello stile tardo-gotico manuelino, patrimonio UNESCO.</span>
+                        <a href="http://www.mosteirojeronimos.gov.pt/" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Mosteiro dos Jerónimos', 'Lisbona')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Monastero dos Jerónimos')">+ Itinerario</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Time Out Market Lisbon</span>
+                        <span class="item-desc">Grande mercato gastronomico coperto dove assaggiare specialità preparate da famosi chef locali.</span>
+                        <a href="https://www.timeoutmarket.com/lisbon/" target="_blank" class="item-link">Sito Ufficiale</a>
+                        <button class="btn-action btn-map" onclick="viewOnMap('Time Out Market Lisbon', 'Lisbona')">🗺️ Mappa</button>
+                        <button class="btn-action" onclick="addToItinerary('Time Out Market Lisbon')">+ Itinerario</button>
+                    </li>
+                </ul>
+
+                <div class="add-form">
+                    <h3 style="margin-top:0; font-size:1rem; color:#005f73;">Aggiungi un Nuovo Luogo</h3>
+                    <select id="new-place-city">
+                        <option value="porto">Porto</option>
+                        <option value="lisbona">Lisbona</option>
+                    </select>
+                    <input type="text" id="new-place-title" placeholder="Nome del luogo">
+                    <input type="text" id="new-place-desc" placeholder="Breve descrizione">
+                    <input type="text" id="new-place-link" placeholder="Link web (opzionale)">
+                    <button onclick="addPlace()">Aggiungi Luogo</button>
+                </div>
+            </div>
+
+            <!-- SCHEDA ITINERARIO -->
+            <div id="itinerario" class="tab-content">
+                <h2>Il Tuo Itinerario</h2>
+                <p style="font-size: 0.9rem; color: #6c757d;">Assegna i luoghi ai giorni dalla scheda "Luoghi" e li vedrai comparire qui sotto.</p>
+                <ul class="item-list" id="itinerary-list"></ul>
+            </div>
+
+            <!-- SCHEDA PRENOTAZIONI -->
+            <div id="prenotazioni" class="tab-content">
+                <h2>Tour Confermati / Proposti</h2>
+                <ul class="item-list" id="bookings-list">
+                    <li>
+                        <span class="item-title">Porto: Degustazione Vino Porto alle Caves Cálem</span>
+                        <span class="item-desc">Data: Venerdì 19 giugno<br>Orario: Ore 16:00 oppure ore 17:20</span>
+                        <button class="btn-delete" onclick="this.parentElement.remove()">Rimuovi</button>
+                    </li>
+                    <li>
+                        <span class="item-title">Lisbona: Walking Tour Storico a Piedi</span>
+                        <span class="item-desc">Data: Domenica 21 giugno<br>Orario: Ore 10:30<br>Punto d'incontro: Praça dos Restauradores</span>
+                        <button class="btn-delete" onclick="this.parentElement.remove()">Rimuovi</button>
+                    </li>
+                </ul>
+
+                <div class="add-form">
+                    <h3 style="margin-top:0; font-size:1rem; color:#005f73;">Aggiungi Nuova Prenotazione</h3>
+                    <input type="text" id="new-booking-title" placeholder="Nome (es: Cena al Ristorante)">
+                    <input type="text" id="new-booking-details" placeholder="Dettagli (es: Giorno 22, ore 20:00)">
+                    <button onclick="addBooking()">Inserisci in lista</button>
+                </div>
+            </div>
+
+            <!-- SCHEDA TRASFERIMENTI -->
+            <div id="trasferimenti" class="tab-content">
+                <h2>Arrivi e Partenze</h2>
+                
+                <div class="info-card">
+                    <strong>Arrivo a Porto (Giovedì 18)</strong><br>
+                    Emanuele: ore 08:15 a Porto<br>
+                    Lisa: ore 20:45 a Porto
+                </div>
+
+                <div class="info-card" style="border-left-color: #0a9396;">
+                    <strong>Spostamento tra Città (Sabato 20)</strong><br>
+                    Bus Porto (Campanhã) - Lisbona (Sete Rios)<br>
+                    Orario: 14:00 - 17:30
+                </div>
+
+                <div class="info-card">
+                    <strong>Partenza da Lisbona (Martedì 23)</strong><br>
+                    Lisa: ore 14:00<br>
+                    Emanuele: ore 21:15
+                </div>
+
+                <h2>Indirizzi Alloggi</h2>
+                <div class="info-card" style="border-left-color: #9b2226;">
+                    <strong>Casa a Porto:</strong><br>
+                    Tv do Monte Tadeu 37, Porto
+                </div>
+                <div class="info-card" style="border-left-color: #9b2226;">
+                    <strong>BnB a Lisbona:</strong><br>
+                    Rua de Buenos Aires 27, 1200-798 Lisboa
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const defaultMapUrl = "https://www.google.com/maps/d/embed?mid=1ISBPkytPIIaTY9zPDX3JfsgXRJeQCSc";
+
+        // Cambia la posizione della mappa caricando l'embed di ricerca di Google Maps
+        function viewOnMap(placeName, city) {
+            var iframe = document.getElementById('map-iframe');
+            var searchQuery = placeName + ", " + city;
+            iframe.src = "https://maps.google.com/maps?q=" + encodeURIComponent(searchQuery) + "&t=&z=16&ie=UTF8&iwloc=&output=embed";
+            
+            // Se siamo su telefono, chiude automaticamente il pannello per far vedere la mappa aggiornata
+            if (window.innerWidth <= 768) {
+                closePanel();
+            }
+        }
+
+        // Ripristina la mappa con l'itinerario personalizzato iniziale
+        function resetMap() {
+            document.getElementById('map-iframe').src = defaultMapUrl;
+            if (window.innerWidth <= 768) {
+                closePanel();
+            }
+        }
+
+        // Gestione apertura schede (sia Desktop che Mobile)
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            
+            document.getElementById(tabName).style.display = "block";
+            document.getElementById(tabName).classList.add("active");
+            
+            if (evt) {
+                evt.currentTarget.classList.add("active");
+            }
+            
+            // Allinea la scelta del menu a tendina mobile
+            document.getElementById('mobile-tab-select').value = tabName;
+        }
+
+        // Gestore specifico per il menù a tendina mobile
+        function handleMobileMenu(value) {
+            if (value === "MAPPA_PRINCIPALE") {
+                resetMap();
+            } else {
+                openTab(null, value);
+                document.getElementById('side-panel').classList.add('open');
+            }
+        }
+
+        // Chiude il pannello scorrevole su smartphone
+        function closePanel() {
+            document.getElementById('side-panel').classList.remove('open');
+            document.getElementById('mobile-tab-select').value = "";
+        }
+
+        // Funzione di Ricerca Luoghi
+        function searchPlaces() {
+            var input = document.getElementById('search-input').value.toLowerCase();
+            var lists = document.querySelectorAll('#luoghi .item-list li');
+            lists.forEach(function(li) {
+                var text = li.innerText.toLowerCase();
+                if (text.includes(input)) {
+                    li.style.display = "";
+                } else {
+                    li.style.display = "none";
+                }
+            });
+        }
+
+        // Aggiungere un nuovo luogo alla lista
+        function addPlace() {
+            var city = document.getElementById("new-place-city").value;
+            var title = document.getElementById("new-place-title").value;
+            var desc = document.getElementById("new-place-desc").value;
+            var link = document.getElementById("new-place-link").value;
+
+            if (title === "") {
+                alert("Inserisci almeno il nome del luogo.");
+                return;
+            }
+
+            var ul = document.getElementById(city === "porto" ? "lista-porto" : "lista-lisbona");
+            var li = document.createElement("li");
+            
+            var linkHtml = link ? '<a href="' + link + '" target="_blank" class="item-link">Link Utile</a>' : '';
+            var jsTitle = title.replace(/'/g, "\\'");
+            var cityNameFormatted = city === "porto" ? "Porto" : "Lisbona";
+
+            li.innerHTML = '<span class="item-title">' + title + '</span>' +
+                           '<span class="item-desc">' + desc + '</span>' +
+                           linkHtml +
+                           '<button class="btn-action btn-map" onclick="viewOnMap(\'' + jsTitle + '\', \'' + cityNameFormatted + '\')">🗺️ Mappa</button>' +
+                           '<button class="btn-action" onclick="addToItinerary(\'' + jsTitle + '\')">+ Itinerario</button>';
+            ul.appendChild(li);
+
+            // Resetta i campi
+            document.getElementById("new-place-title").value = "";
+            document.getElementById("new-place-desc").value = "";
+            document.getElementById("new-place-link").value = "";
+        }
+
+        // Aggiungere un luogo all'itinerario
+        function addToItinerary(title) {
+            var day = prompt("A quale giorno vuoi assegnare '" + title + "'? (Es. Giovedì 18, Venerdì 19)");
+            if (day) {
+                var ul = document.getElementById("itinerary-list");
+                var li = document.createElement("li");
+                li.innerHTML = '<span class="item-title">' + day + '</span>' + 
+                               '<span class="item-desc">' + title + '</span>' +
+                               '<button class="btn-delete" onclick="this.parentElement.remove()">Rimuovi</button>';
+                ul.appendChild(li);
+                alert("'" + title + "' è stato aggiunto al tuo itinerario sotto la voce '" + day + "'. Controlla la scheda Itinerario!");
+            }
+        }
+
+        // Aggiungere una nuova prenotazione
+        function addBooking() {
+            var title = document.getElementById("new-booking-title").value;
+            var details = document.getElementById("new-booking-details").value;
+            
+            if (title === "" || details === "") {
+                alert("Per favore compila entrambi i campi.");
+                return;
+            }
+
+            var ul = document.getElementById("bookings-list");
+            var li = document.createElement("li");
+            
+            li.innerHTML = '<span class="item-title">' + title + '</span>' +
+                           '<span class="item-desc">' + details.replace(/\n/g, '<br>') + '</span>' +
+                           '<button class="btn-delete" onclick="this.parentElement.remove()">Rimuovi</button>';
+            ul.appendChild(li);
+
+            document.getElementById("new-booking-title").value = "";
+            document.getElementById("new-booking-details").value = "";
+        }
+    </script>
+</body>
+</html>
